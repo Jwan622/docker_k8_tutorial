@@ -26,13 +26,13 @@ and this is how a container would work
 ![container](images/docker_container.png)
 
 
-# Section X
+# Section 3
 
 ## Notes
-
+When running docker build, each step in run inside and intermediate container and the output of a step is a new image that is used for the next step. At every step, you output an image with a new file system and new command
 
 ## New commands
-instead of pasting an id everytime, use and ID.
+instead of pasting an id everytime, use an ID or tag using the -t flag.
 
 ```
 docker build -t jwan/redis:latest .
@@ -43,6 +43,13 @@ docker build -t jwan/redis:latest .
 ```
 docker build -t jwan/redis:latest
 ```
+
+Basic Dockerfile:
+From alpine
+Run apk add --update redis
+CMD ["redis-server"]
+
+
 ## New Dockerfile commands
 
 
@@ -81,10 +88,20 @@ CMD ["npm", "start"]
 
 ## Notes
 
+
+#### TAgging
+tag alpine means smallest image possible. Tags come after a colon after the repo name.
+
+- copy command moves files from our machine to temp container during build process.
+COPY ./ ./folder moves everything in currenet working directory on computer to ./folder in container.
+the first argument to COPY is a path on our computer, the second is a path in the container.
+
 #### setup port mapping
+- by default no traffic into our machine goes into the container, have to setup port mapping for that to happen. Container has its own isolated set of ports, but by default no traffic to our comp is directed into the container. Port mapping -anytime a request is made to local network is forwarded to container.
 - specified during runtime during the run command.
 if anyone makes an incoming local network request to some port inside container:
 - containers can reach out (clearly because it can install) but traffic into the container is limited.
+- no limitation of container to reach out to the world, just a limitation to reach into the container.
 
 ```
 docker run -p 8080:8080 <image_name_or_id>
@@ -102,6 +119,15 @@ This is conceptually what the run command is doing:
 - ports can also be different.
 
 
+#### working directory
+
+- instead of copying all files into the top level, you can specify a nested working directory to avoid conflicts with the top level directories.
+- the instruction is WORKDIR into the Dockerfile. any following commands will be executed relative to this folder. So 
+WORKDIR /usr/app
+COPY ./ ./
+
+that will create /usr/app and then copy will copy everything from computer directory root to /usr/app.
+
 #### prevent unnecessary rebuilds:
 ```
 FROM node:alpine
@@ -118,7 +144,7 @@ COPY ./ ./
 CMD ["npm", "start"]
 ```
 
-the COPY command looks at local package.json specified by the build context argument of `docker run` and copies them over to the WORKDIR.
+the COPY command looks at local package.json specified by the build context argument of `docker run` and copies them over to the WORKDIR. Notice the second argument just has to be ./ and not ./package.json
 - by splitting copy up into two commands, any changes to index.js will only bust cache of second COPY and npm install will not run again unless the package.json changes.
 
 
@@ -154,3 +180,14 @@ CMD ["npm", "start"]
 ```
 
 
+
+
+# Section 5
+
+## Notes
+
+- So imagine if you put node and redis in the same image. Say the app keeps track of visits. The problem is thatif this scales and you have to spin up more containers, each container has its own separate and siloed redis server. So the number of visits would be siloed and no one redis would have the true count of all visits. That's a problem. Instead you should separate out the redis and node containers so you can scale the node server but not the redis server.
+
+
+## New commands
+## New Dockerfile commands
