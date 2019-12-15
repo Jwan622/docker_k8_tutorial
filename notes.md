@@ -255,6 +255,10 @@ will be intercepted by Docker and it will handle the resolution of that request.
 
 `docker build -f Dockerfile.dev .` can specify a new dockerfile to build from.
 
+`docker run -p 3000:3000 -v /app/node_modules -v $(pwd):/app <image>` runs a docker container with an image that maps the present working directory files on local to the app folder in the container but it also doesn't touch the /app/node_modules folder and keeps a bookmark so it doesn't get overwritten. We can replace this with a docker compose command instead. Bookmarking is like holding onto the volume inside of the container so it doesn't get deleted.
+
+To run tests:
+`docker run -it <tag> npm run test` the -it flag hooks the container up to standard in so we can run npm test commands in the container when it prompts us. standard out is already hooked up by default.
 
 ## New Dockerfile commands
 
