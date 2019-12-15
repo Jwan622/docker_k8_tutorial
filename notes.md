@@ -188,6 +188,74 @@ CMD ["npm", "start"]
 
 - So imagine if you put node and redis in the same image. Say the app keeps track of visits. The problem is thatif this scales and you have to spin up more containers, each container has its own separate and siloed redis server. So the number of visits would be siloed and no one redis would have the true count of all visits. That's a problem. Instead you should separate out the redis and node containers so you can scale the node server but not the redis server.
 
+- when running `docker run`, no need to put in the tag like latest.
+
+- if you run the node application and the redis server in separate containers, these two containers have no automatic communication between the two. isolated processes with no communication. So... setup network infrastructure, you have two options: 1) use docker cli that can setup a network between two containers, it's a pain in the ass 2) docker compose. docker compose is a separate CLI and is installed. docker compose exists to help you not repeat repetitive commands with docker CLI. Docker compose can also very eailsy startup multiple docker containers and auto connect them with some kind of networking, it functions as teh CLI and issues multiple commands quickly.
+
+- `docker-compose.yml` file has special syntax and the file will be fed into docker-compose CLI and will setup the containers with the configs.
+
+- services in docker-compose world means container, sort of. It's a type of contianer really called a service.
+
+```yml
+version: '3'
+services:
+  redis-server:
+    image: 'redis'
+  node-app:
+    build: .
+    ports:
+      - "4001:8080"
+```
+
+the above builds a container using an image from docker hub and a Dockerfile locally.
+- the array is a dash because there can be multiple port mappings. the first number 4001 is a port on our local machine, 8080 is the port in the container. 
+
+-docker compose will create the containers on the same network so the two can exchange info without having to open ports between the two. the port declaration in node-app is for our machine to access the container, but not for the containers to access each other.
+
+
+- So how do we access redis server from node js code? in our index.js, this code:
+
+```javascript
+const client = redis.createClient({
+    host: 'redis-server'
+});
+```
+
+will be intercepted by Docker and it will handle the resolution of that request.
+
+
+- restart policy for docker-compose. No, always, on-failure, unless-stopped.
 
 ## New commands
+
+`docker run <image>` is replaced by `docker-compose up`. `docker-compose up` will create all the services or images in our `docker-compose.yml` file.
+
+`docker build .` and `docker run <image>` is replaced by `docker-compose up --build`
+
+`docker-compose up -d` starts up group of containers in the background
+`docker-compose down` stops all of the containers.
+
+`docker-compose ps` is like docker ps but needs to be run from directory with docker-compose.yml directory.
+
 ## New Dockerfile commands
+
+
+
+
+
+# Section 6
+
+## Notes
+
+- How can you make changes to the source code to cleverly show up in the container without having to stop the container, and rebuild it, and restart it. The container doesn't update when you make changes to local code. Docker volumes - setup a placeholder in the container. IT has references instead of folders. the placeholders point back to local machine. Volume can be thought of as port mappings but to local resources.
+
+- Use a new command to do this: docker run -p 3000:3000 -v $(pwd):/app <image_id>
+
+## New commands
+
+`docker build -f Dockerfile.dev .` can specify a new dockerfile to build from.
+
+
+## New Dockerfile commands
+
+
