@@ -252,6 +252,7 @@ will be intercepted by Docker and it will handle the resolution of that request.
 - Use a new command to do this: docker run -p 3000:3000 -v $(pwd):/app <image_id>
 
 - the best thing about using docker compose and volumes is that they rerun when changes are made to the app files.
+- multistep dockerfiles allow us to do a build with one image, and run with another like nginx.
 
 ## New commands
 
@@ -274,3 +275,40 @@ to override command and run test and have it be interactive:
 ## New Dockerfile commands
 
 
+- if you do `FROM node:alpine as builder`, it means everything after this will be known as the builder phase. If there's is another `FROM` in a Dockerfile, then it starts another phase and it completes the previous block.
+- doing `COPY . .` is fine during the build phase because we won't be changing our source code further. We use volumes when we want to develop faster and see our code changes immediately. 
+
+```Docker
+FROM node:alpine as builder
+
+WORKDIR '/app'
+
+COPY package.json .
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+
+FROM nginx
+COPY --from=builder /app/build /usr/share/nginx/html
+
+```
+two phases, the second phase just throws out everything except for the build folder which is created when `npm run build` is run.
+- `COPY --from=builder /app/build /usr/share/nginx/html` we copy everything from the builder phase from the /app/build folder to the appropriate nginx folder is used by nginx to serve static content. `COPY --from` specifies the phase builder.
+
+-to run the above run `docker build .` and then `docker run -p 8080:80 fed9975d68c6`
+- now we have a production application with nginx!
+
+
+when we visit `localhost:8080` we see:
+
+```text
+docker run -p 8080:80 fed9975d68c6
+172.17.0.1 - - [16/Dec/2019:16:18:39 +0000] "GET / HTTP/1.1" 200 2217 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36" "-"
+172.17.0.1 - - [16/Dec/2019:16:18:39 +0000] "GET /static/js/2.dd1fcc93.chunk.js HTTP/1.1" 200 130053 "http://localhost:8080/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36" "-"
+172.17.0.1 - - [16/Dec/2019:16:18:39 +0000] "GET /static/css/main.d1b05096.chunk.css HTTP/1.1" 200 1051 "http://localhost:8080/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36" "-"
+172.17.0.1 - - [16/Dec/2019:16:18:39 +0000] "GET /static/js/main.649334a6.chunk.js HTTP/1.1" 200 1134 "http://localhost:8080/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36" "-"
+```
