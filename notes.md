@@ -251,6 +251,8 @@ will be intercepted by Docker and it will handle the resolution of that request.
 
 - Use a new command to do this: docker run -p 3000:3000 -v $(pwd):/app <image_id>
 
+- the best thing about using docker compose and volumes is that they rerun when changes are made to the app files.
+
 ## New commands
 
 `docker build -f Dockerfile.dev .` can specify a new dockerfile to build from.
@@ -259,6 +261,15 @@ will be intercepted by Docker and it will handle the resolution of that request.
 
 To run tests:
 `docker run -it <tag> npm run test` the -it flag hooks the container up to standard in so we can run npm test commands in the container when it prompts us. standard out is already hooked up by default.
+
+to override command and run test and have it be interactive:
+`docker run -it <image> npm run test`
+
+`docker exec -it <container> sh`
+- that executes an run a command in the container and starts a shell and a connection to standard in with -it.
+
+`docker attach <container>`
+- attaches to standard in and out of primary process.. always attaches to primary process of container, not sub processes like test suites. so that's why tehre's that shortcoming of testing in docker containers and why interactive commands don't work. we atatched to the wrong process in the container.
 
 ## New Dockerfile commands
 
