@@ -312,3 +312,28 @@ docker run -p 8080:80 fed9975d68c6
 172.17.0.1 - - [16/Dec/2019:16:18:39 +0000] "GET /static/css/main.d1b05096.chunk.css HTTP/1.1" 200 1051 "http://localhost:8080/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36" "-"
 172.17.0.1 - - [16/Dec/2019:16:18:39 +0000] "GET /static/js/main.649334a6.chunk.js HTTP/1.1" 200 1134 "http://localhost:8080/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36" "-"
 ```
+
+# Section 7
+
+## Notes
+
+- my work for section 7 with travis and AWS is in git@github.com:Jwan622/docker-react.git
+- Travis can pull github repo with new changes and do any work like test, deploy, delete it all if you want. Traditionally for testing and deployment to AWS.
+- travis will use the Dockerfile.dev from section 6 because only it has the test suite. The production Dockerfile gets rid of it and only keeps the app/build folder.
+
+- for travis to use docker, it needs superlevel permissions so `sudo:required` is in the `.travis.yml` file.
+- in `.travis.yml`, the `services: - Docker` is to help Travis understand it needs Docker installed.
+- 
+```text
+before_install:
+  - docker build -f Dockerfile.dev .
+```
+
+the above tells to find the Dockerfile.dev in the current context with the .
+- need to tag it because travis won't copy paste it for you. Use a tag
+- the `.travis.yml` file has to be toplevel in teh github repo, mine was not and I was stuck for a while because I'm an idiot.
+
+## New commands
+## New Dockerfile commands
+
+
