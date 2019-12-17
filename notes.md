@@ -323,17 +323,74 @@ docker run -p 8080:80 fed9975d68c6
 
 - for travis to use docker, it needs superlevel permissions so `sudo:required` is in the `.travis.yml` file.
 - in `.travis.yml`, the `services: - Docker` is to help Travis understand it needs Docker installed.
-- 
+- AWS Elastic Beanstalk will scale everything up for us using a load balancer and it will spin up more VMs with our container  as traffic reaches a threshold. Requests go to the load balancer first.
+
+- in `.traviss.yml`
+
 ```text
+
 before_install:
   - docker build -f Dockerfile.dev .
 ```
 
 the above tells to find the Dockerfile.dev in the current context with the .
+
 - need to tag it because travis won't copy paste it for you. Use a tag
 - the `.travis.yml` file has to be toplevel in teh github repo, mine was not and I was stuck for a while because I'm an idiot.
 
+- So how do you have travis deploy to AWS once tests have pass? We can add to the `.travis.yml`
+
+```text
+deploy:
+  provider: elasticbeanstalk
+```
+
+that helps travis deploy to AWS ESB.
+
+- When travis deploys, it takes the files inside github repo, zips them, and sends them to s3, thats why we need to specify a `bucket_Name` in our travis deploy section. whebn it's uploaded, travis will poke ESB (elastic beanstalk) and say it's uplaoded, and ESB will then take the zip file from the bucket. That's why we need to specify the bucket_name in the travis file. Find the bucket in s3.
+
+```text
+deploy:
+  provider: elasticbeanstalk
+  region: "us-east-1"
+  app: "docker-react"
+  env: "Docker-env"
+  bucket_name: "elasticbeanstalk-us-east-1-516088479088"
+  bucket_path: "docker-react"
+  on:
+    branch: master
+```
+
+the bucket_path is the name of the path/folder that will be created in the bucket_name. It will created teh first time we deploy. the `on master` part tells travis to only deploy when the master branch is updated with new code, not feature branches.
+
+__ON AWS ESB__
+- an application is a common set of configs that houses environments but the environment is the actual application. 
+
+__ON IAM__
+- programmtic access in IAM is for when you never access it via the AWS console, jsut through network requests.
+- you can add policies directly to user or to a group. when creating a user for travis, we can attach policy directly.
+- we need to include AWS keys into travis CI because we're allowing travis CI to access resources in our AWS account. That's why we put AWS keys in our `.travis.yml` file.
+
+- takeaway from this is that docker made deployment easier. In our `travis.yml` file, all we had to do was a before install and script that had a `docker build` and a `docker run` command that had an override to run tests. The rest of the file can be the same if you swap out a different image in the build step. So docker images simplify deployment because you just have to specify the image.
+- I did get this all working!
 ## New commands
 ## New Dockerfile commands
 
+`EXPOSE 80` on our laptop does nothing and it's more communication to developers. BUT AWS beanstalk will look for expose instruction and will ESB will port map automatically from the load balancer to this port.
 
+
+# Section 8
+
+## Notes
+
+- we're building this:
+
+![archiecture](images/section_8/architecture.png)
+
+- a few things, redis is needed to store the index of the fibonacci sequence, not the values themselves. the worker pulls the index and calculates the fibonacci value slowly which is why the worker adn redis are needed. postgres will store the fib indices that have already been calculated. This is a multicontainer application that will have several containers talking to each other.
+
+- problem with section 7 is that travis was building the image and so was AWS ESB (elastic beanstalk), why build the image twice? Our web server was building the image which seems like a nono.
+
+
+## New commands
+## New Dockerfile commands
