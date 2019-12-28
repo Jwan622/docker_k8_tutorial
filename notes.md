@@ -387,9 +387,170 @@ __ON IAM__
 
 ![archiecture](images/section_8/architecture.png)
 
-- a few things, redis is needed to store the index of the fibonacci sequence, not the values themselves. the worker pulls the index and calculates the fibonacci value slowly which is why the worker adn redis are needed. postgres will store the fib indices that have already been calculated. This is a multicontainer application that will have several containers talking to each other.
+- a few things, redis is needed to store the index of the fibonacci sequence, not the values themselves. the worker pulls the index and calculates the fibonacci value slowly which is why the worker adn redis are needed. postgres will store the fib indices that have already been calculated. This is a multicontainer application that will have several containers talking to each other.47
 
 - problem with section 7 is that travis was building the image and so was AWS ESB (elastic beanstalk), why build the image twice? Our web server was building the image which seems like a nono.
+
+
+## New commands
+## New Dockerfile commands
+
+
+# Section 9
+
+## Notes
+- dev containers should change when there's source code changes. it makes for the workflow to be smooth. So we won't have to rebuild the image each time. Use volumes through docker compose.
+- nginx can route. It will take requests with `/api/something/sometihng` with api in front and route them to the node server. Other requests will get sent to react. Thats' why nginx sits in the middle. all requests go to nginx and it routes to different services. Look up `nginx patyh routing` in the udemy course.
+- an upstream server is one behind nginx, a server that nginx can redirect traffic to.
+
+```text
+upstream client {
+    server client:3000;
+}
+
+upstream api {
+    server api:5000;
+}
+```
+
+- remember that the domains of the docker services are craeted in the docker compose yml file... the names of the services there act as domains. So we can use those as addresses in teh nginx `default.conf` file
+## New commands
+## New Dockerfile commands
+
+```yml
+FROM nginx
+COPY default.conf /etc/nginx/conf.d/default.conf
+```
+
+The above copy a config file into the container/image. And if we don't provide a run command of an image, than the default command of the parent image will take precedence. We specify a specific file at the right because we are overwriting the existing default file of the nginx image with our own. 
+
+
+in docker compose file:
+
+
+```yml
+nginx:
+    restart: always
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - '3050:80'
+```
+
+in the above docker-compose snippet, the above maps 3050 on our local machine to 80 in the container.
+We also have it restarting always to keep it running. 
+
+You can run docker compose by running `docker-compose up --build` and that forces a rebuild of everything too.
+
+
+# Section 10
+
+- now we will let travis build images and push them to dockerhub so ESB (ellastic beantalk) will not be building prod images. They will pull from dockerhub private repos instead. A lot of other AWS services can pull from dockerhub. This section will just push images (several) to dockerhub so that EB can later pull the images.
+
+## Notes
+
+```yml
+language: generic
+sudo: required
+services:
+  - docker
+
+#just for tests
+before_install:
+  - docker build -t jwan/react-test -f ./client/Dockerfile.dev ./client
+
+# run tests
+script:
+  - docker run -e CI=true jwan/react-test npm test
+
+# prod builds, no need to specify Dockerfile, it finds it by default
+after_success:
+  - docker build -t jwan/multi-client ./client
+  - docker build -t jwan/multi-nginx ./nginx
+  - docker build -t jwan/multi-server ./server
+  - docker build -t jwan/multi-worker ./worker
+  # push to Dockerhub, login first
+  - echo "$DOCKER_PASSWORD" | docker login -u  "$DOCKER_ID" --password-stdin
+  - docker push jwan/multi-client
+  - docker push jwan/multi-nginx
+  - docker push jwan/multi-server
+  - docker push jwan/multi-worker
+
+```
+
+the above is a travis file that will build the dev docker file, run tests, build prod docker files, and then push to dockerhub. This is all done in travis.
+
+
+## New commands
+## New Dockerfile commands
+
+
+
+# Section 11
+
+## Notes
+- `dockerrun.-aws.json` file just tells AWS services what image ot pull and not how to build an image like a docker-compose file. A docker-compose file tells Docker how to build the image but the `dockerrun-aws.json` file tells  AWS what image to pull. We alraedy have teh images on dockerhub.
+- Elastic beanstalk doesn't relaly know how to work with containers, but ECS does. ECS is the elastic container services. They use task definitions. ESB delegates the container hosting to ECS. You create task definitiions for ECS. Each task definition files is similar to container definitions in the dockerrun file.
+- in the container defintiions, you have one for every container. So if you have 4 container to be hosted by ESB, you need 4 definitions.
+
+- essential means that if the essential container goes down, the other containers go down too even if they were running fine. This is in the `dockerrun.aws.json` file. nginx server goes down, the other ones should go down too so teh nginx server is essential. At least one container must be marked essential.
+
+```yml
+{
+  "AWSEBSDockerrunVersion" : 2,
+  "containerDefinitions": [
+    {
+      "name": "client",
+      "image": "jwan622/multi-client",
+      "hostname": "client",
+      "essential": false
+    }
+  ]
+}
+```
+
+key thing is that the docker-compose.yml file is for the development environment and the `dockerrun.aws.json file` is for production. In the `docker-compose.yml` file, it's clear that we use redis and postgres images for the containers. But in the `dockerrun.aws.json` file it's tricker.
+
+```yml
+
+deploy:
+  edge: true
+  provider: elasticbeanstalk
+  region: us-east-1
+  app: multi-docker
+  env: MultiDocker-env
+  bucket_name: elasticbeanstalk-us-east-1-516088479088
+  bucket_path: docker-multi
+  on:
+    branch: master
+  access_key_id: $AWS_ACCESS_KEY
+  secret_access_key: $AWS_SECRET_KEY
+```
+
+the travis file has this section which hooks into elastic beanstalk so travis is responsible for tapping elastic beanstalk and telling it to do work.
+
+- s3 also gets teh whole application including the `dockerrun.aws.json` file which is the only part that it actually needs. ESB uses that file to pull the images.
+![development](images/section_11/development.png)
+
+production. The middle beanstalk definitions are all in the `dockerrun.aws.json` file:
+
+![production](images/section_11/production.png)
+
+In the above image, Redis and postgres are not in ESB, they are external services. AWS RDS is for postgres and amazon elastic cache are for redis. They are general services that can be used for any application. Elastic Cache maintains Redis for us, easy to scale, built in logging.
+
+One benefit of using ElasticCache is that it's decoupled from ESB if you want to move away from ESB. It doesn't care that beanstalk is used. All that ElasticCache cares is that it's connected to it... other services just connect to it. It's decoupled from ESB. You just connect to ElasticCache and that's all that matters.
+
+Benefits of RDS: RDS takes backups for you which is nice. and you can rollback to it easily.
+
+proboem:
+by default, these services cannot talk to each other. The EB with 4 containers, postgres RDS, and elastic cache cannot talk to each other by default.
+
+
+- in every region in AWS you get your own default vpc. It has security rules and prevents other people from using your EB service. a security group is a firewall rule. it states the rules that describe what services can connect to different services in the vpc. Security group has a bunch of firewall rules. EB by default allows incoming traffic from anywhere on port 80.
+
+- one way to get three services to talk to each other is to create a security group that allows any other service with that security group to allow traffic to it.
+![communication](images/section_11/communication.png)
 
 
 ## New commands
