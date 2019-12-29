@@ -555,3 +555,108 @@ by default, these services cannot talk to each other. The EB with 4 containers, 
 
 ## New commands
 ## New Dockerfile commands
+
+
+
+# Section 12
+## Notes
+- how would we scale docker applications? kubernetes.
+- ESB would spin up different copies of the entire set of containers. maybe more differnet sets of containers.  More machines in a sense of the solution.
+
+It would look like this, call it image B:
+
+![scaled_up](images/section_12/scale_up_machine_not_k8.png)
+
+this is inefficient because we wouldn't need 3 nginx containers. Really the worker is the blocker because it's processing something that is slow. Its fibonacci calculator is slow and the bottle neck so really we just need more worker containers.
+
+
+
+- But it'd be better if we could just spin up the worker containers since that's the slow part. Kuberentes allow us to have different machines with a lot of control over what containers they run.
+
+Kubernetes cluster:
+
+![cluster](images/section_12/k8_cluster.png)
+
+a node are a virtual machine or physical computer that is running containers, any number. each node can run different containers or different number of containers as you can see above. Can be completely different containers. So that way we can scale up just the worker image on a virtual machine.
+- nodes are managing by the master. The master is what we interact with. We give directions to the master like "run 5 containers running a specific image".
+- we anytime we have application of many differnet types of containers in different quantities on different computers.
+- we wouldn't really find need of it where we ran the same set of containers over and over again like in image B.   
+
+
+- in development, we use minikube to use kubernetes on our local machine
+- in production, we use managed solution like Amazon Elastic Container Services for Kubernetes (EKS) on amazon or google cloud kubernetes (GKE). Or you could do it yourself instead of a managed solution.
+
+- minikube will create a virtual machine that will run containers. minikube creates that virtual machine. We will use kubectl which is a program that will interact with a kubernetes cluster. It tells a virtual machine or node what containers it should be running. 
+- minikube creates and runs a cluster on the local machine.
+- kubectl is used locally or in prod since it interacts with any cluster, local minikube or prod.
+-if you just have multiple different types of containers, kubernetes is a good choice. If just one type of container, k8 is not a good choice.
+
+- section 12 gets the multi-client image running on a k8 cluster, just that one image.
+
+- differences between docker and k8:
+
+![differences](images/section_12/differences_btw_k8_docker.png)
+
+- in the above, we see that k8 expects the images to already be built.
+- in k8, we have multiple config files for each objecg we want to create. one config file per object (an object is not necessarily a container).
+- in k8, we have to manually set up networking. in docker-compose we can easily connect to other containers using docker-compose.
+
+- What is an k8 object? It's not a container exactly. kubectl will create objects. An object is anything that exists in a k8 cluster.  Pods and Services are objects that are in the cluster. They have different purposes. A k8 pod will run a container. Services setup networking in our cluster.
+
+- What is api version? It's a way to give us access to predefined object types in our k8 config file:
+
+![k8_apiVersion](images/section_12/k8_apiVersion.png)
+- types of objects that we specify that we can specify that we want to create in any config file.
+
+
+- what is a pod and node:
+
+![podnode](images/section_12/pod_node.png)
+
+- a virtual machine is a node. a node will be used by k8 to run some number of objects. basic objects are pods. Pods run in nodes or virtual machines. POds are grouping of containers with a common purpose. 
+- smallest thing that can be deployed is a pod. You cannot deploy containers without additional overhead. 
+- A pod must have one or more containers inside of it. and a pod is the smallest thing we can deploy.
+- the purpose of a pod is to group containers with a similar purpose, ones that must be deployed together to work correctly. If things fail and it cauess other things to fail, they should be in the same pod. If they can fail and other containers can stil lbe up, they should probably be in separate pods. Must be executdd with each other... they would be in the pod. If the pods were depenedent on each other, that' why multiple containers would be in a pod. If one pod goes away, other pods might become useless... that's a sign that the containers are coupled.
+
+
+- The Service config sets a type. That type can be: NodePort, ClusterIP, LoadBalancer, Ingress. A NodePort service expose a container to the outside world... allow us to access the container via web browser. It's only for development services with an exception which will be covered later.
+- Remember our client has a nginx server listening at port 3000 which is directed to by the service. This is our architecture:
+
+- the service talks to the pod via label selector system.  It looks for a key value of component:web and directs traffic to it.
+In the service:
+```yml
+  selector:
+    component: web
+```
+
+in the pod:
+
+```yml
+ labels:
+    component: web
+```
+
+the selector in the service is matched with a label in teh pod. The key:value of component:web is arbitrary btw and could be any key vlaue pair. `label` and `selector` are keywords though.
+
+
+ports in the service:
+```yaml
+spec:
+  type: NodePort
+  ports:
+    - port: 3050
+      targetPort: 3000
+      nodePort: 31515
+```
+
+the first port is useless in our application. It is the port that another application in the cluster could use to connect to port 3000.
+- targetPort is the port in the pod that we want to open up traffic to in the pod. 3000 means any traffic is sent to port 3000 in the pod.
+- nodePort is the most important. it's the port developers will use to test out the pod. We can type the port in the browser to access the pod. 
+any requests to the nodePort get sent to the targetPort.
+
+![k8_architecture](images/section_12/k8_architecture.png) 
+
+the kube proxy is the window to the outside world.  It directs requests to the correct service. The port 3000 is specified by teh target port in the service. 
+
+## New commands
+
