@@ -660,3 +660,7 @@ the kube proxy is the window to the outside world.  It directs requests to the c
 
 ## New commands
 
+`kubectl apply -f <file>`
+the -f allows us to specify a file name. 
+- the above command allows us to apply changes to our k8 cluster.
+- `apply` means we will change config of our cluster.
