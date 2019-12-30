@@ -658,9 +658,43 @@ any requests to the nodePort get sent to the targetPort.
 
 the kube proxy is the window to the outside world.  It directs requests to the correct service. The port 3000 is specified by teh target port in the service. 
 
+
+- so you can't just go to `localhost:31515` where the number is the NodePort, because the virtual machine where the cluster is is not addressed by localhost. all the ports in teh vm are not on localhost. You need to ask minikube what the IP is of the virtual machine. You need to visit that IP address. type in `minikube ip` and use that IP. You cannot use `localhost` period.
+
+- evne if you kill a docker container, kubernetes brings it back you can see if the restarts increases by 1.
+
+- the k8s master has a list of responsibilities from the config file and the master fulfills those responsibilities.
+
+- each k8 virtual machine has a copy of docker. on our computer we have two versions of docker then, one on our computer, and one on teh virtual machine which is just a neat fact.
+
+
+
 ## New commands
 
 `kubectl apply -f <file>`
 the -f allows us to specify a file name. 
 - the above command allows us to apply changes to our k8 cluster.
 - `apply` means we will change config of our cluster.
+
+```text
+ kubectl apply -f client-pod.yaml
+pod/client-pod created
+✔ 11:13 ~/simplek8s [master L|●2…1] $ kubectl apply -f client-node-port.yaml
+service/client-node-port created
+```
+ did it work? Let's check the status with `kubectl get pods`. `get` is a way to get information about an object.
+ 
+ ![get_pods](images/section_12/kubectl_get_pods.png)
+ 
+ 
+ output below:
+ 
+ ```text
+kubectl get pods
+NAME                                READY   STATUS    RESTARTS   AGE
+client-pod                          1/1     Running   0          51s
+health-checker-5f9d7c8854-lkjzw     1/1     Running   0          78d
+webapp-deployment-fb5f494c5-m97nz   1/1     Running   0          78d
+webapp-deployment-fb5f494c5-z9lhv   1/1     Running   0          78d
+```
+
