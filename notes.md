@@ -663,10 +663,28 @@ the kube proxy is the window to the outside world.  It directs requests to the c
 
 - evne if you kill a docker container, kubernetes brings it back you can see if the restarts increases by 1.
 
-- the k8s master has a list of responsibilities from the config file and the master fulfills those responsibilities.
+- the k8s master has a list of responsibilities from the config file and the master fulfills those responsibilities. The master is constantly polling the nodes and anytime something happens in the node, the master gets a notification like when a container dies and then the list of responsibilities and state in the master is updated. We work directly with the master when we deploy a config file using `kubectl`. 
 
 - each k8 virtual machine has a copy of docker. on our computer we have two versions of docker then, one on our computer, and one on teh virtual machine which is just a neat fact.
 
+Imperative vs Declarative:
+- we tell k8s what we want. imperative: we issue a series of commands to create container/delete/restart or whatever. declarative: we tell/give guidance master the state we want and the master figures it out:
+
+![declarative](images/section_12/declarative_vs_imp.png)
+
+
+
+imperative:
+
+the problem is what we have to 1. figure out current state and update the state *depending* on that state. it requires computation out of us. we have to research current state, and come up with a migration path to take us from current state to desired state. That's a lot of work from us. An imaginary example:
+
+![imperative](images/section_12/imperative.png)
+
+
+in declarative, the k8s master takes care of it the state. We don't have to care about the current state.
+
+- k8s has a way to do both imperative and declarative. `kubectl` commands via the command line is imperative. k8s also has declarative. We should use declarative using the config file. 
+every engineer will advocate for the declarative approach, it's easier.
 
 
 ## New commands
