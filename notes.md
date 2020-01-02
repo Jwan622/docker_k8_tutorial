@@ -716,3 +716,97 @@ webapp-deployment-fb5f494c5-m97nz   1/1     Running   0          78d
 webapp-deployment-fb5f494c5-z9lhv   1/1     Running   0          78d
 ```
 
+
+
+
+# Section 13
+## Notes
+
+point of this section is to declaratively update a k8s cluster image to a different image.
+
+![dev_vs_imp](images/section_13/dec_vs_imp.png)
+
+- k8s determines which pod to update using the config file name and type. If the config matches with an object in the cluster, it will update instead of creating a new one. Master will match with the config and if it is found, it will update. So just update the config file with say a new image but keep the name and type the same and just run `kubectl apply -f client-pod.yaml` to update. You can update a pod's config's image but not port. To update the port, you need to use a deployment, not a pod.
+- Once a pod has been a created, you cannot update the pod's port. But, use a deployment object instead.
+ ![deployment](images/section_13/deployment.png). 
+
+- A deployment maintains a set of identical pods. deployment and pods can run containers. a pod runs a single set of containers that are integrated with each other. only for development. rarely used in production because of limitations of updating its config. Deployments are good for dev and production. Deployments runs set of identical pods each with identical containers with identical configs.  Deployments are used in production and are used much more often than pods. Forget about pods. Deployments use pods. When we create a deployment, it is attached to a pod template which is used to create a pod. Deployments use pod templates to create pods. If we change the pod template, the pod is changed. with a deploymenet, you can update any piece of config.
+
+- remember to connect, we run `minikube ip`, and then connect tothe nodeport.
+
+- services are usefulbecause they match to pods with selectors and route traffic to it, regardless of whether the pod is recreated with a new IP. services abstract out that difficulty of connecting to pods. We can connect to teh port associated with the service and the service will connect us to the port. Pods do have their own IP but if htey are torn down or recreated, the IP will cahnge so having to manually connect to the new IP is painful. Services do that work for us and we just have to connect to the service IP 31515 that we manually assigned. Every pod has an IP address and is internal inside the virtual machine and assigned to the pod.
+
+- when changing a deployment, the pod gets deleted and recreated instead of updating the pod. When you change the deployment port number, that's what happens. 
+
+
+- when updating a deployment, update the file, and apply it, and you can run `kubectl get deployment` to see the new deployment. Or `kubectl describe deployment`. When you update an image, how would you update the deployment though?
+
+- we will update the image with a version number and send it to docker hub, and issue an imperative command to k8 to find the new image instead of changing the config file. Downside: config and deployment are out of sync. 
+![services](images/section_13/services.png)
+
+
+## New commands
+
+- to look at pod's containers:
+
+`kubectl describe <object-type> <object-name>`
+
+- the above gets detailed info like a pod's containers.
+
+- `kubectl describe <object-type>` to get info about all of that object type.
+
+
+```text
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: web
+  template:
+    metadata:
+      labels:
+        component: web
+    spec:
+      containers:
+        - name: client
+          image: jwan622/multi-client
+          ports:
+            containerPort: 3000
+```
+
+- `replicas` refers to the number of pods that the deployment makes... each pod is identical. that run the template. the master create the pod. the deployment gets teh pod using the label:value component:web. That' what the selector and the metadata are for. A pod might have multiple labels and the selector can very selectively get only certain pods with certain labels using the `matchLabels` property.
+- the template section is the config for every single pod created by the deployment. the template looks exactly like a pod deployment config.
+
+- `kubectl delete -f <config_file>`. will delete that object. kubectl will look at the file and use the kind and name, and deletes the object with the same name and kind. This is an imperative command.
+
+- `kubectl set image <object-type> / <object-name> <container-name> = <new-image>`
+
+- the `container-name` is the name of the container which the master will use to find the containers to update inside the deployment's pods. each pod could have many different containers and so the name is a way to specify the container.
+- the object-type is deployment and the object-name is client-deployment
+
+
+
+to reconfigure Docker cli in a terminal window:
+
+```bash
+eval $(minikube docker-env)
+docker ps
+```
+
+`minikube docker-env` sets environment variables that docker cli uses. It most importantly sets the docker host:
+
+```bash
+ minikube docker-env
+export DOCKER_TLS_VERIFY="1"
+export DOCKER_HOST="tcp://192.168.99.100:2376"
+export DOCKER_CERT_PATH="/Users/jwan/.minikube/certs"
+# Run this command to configure your shell:
+# eval $(minikube docker-env)
+✔ 16:30 ~/complex/client [master|✚ 1…1] $ minikube ip
+192.168.99.100
+✔ 16:30 ~/complex/client [master|✚ 1…1] $
+```
