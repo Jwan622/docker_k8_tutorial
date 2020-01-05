@@ -778,7 +778,14 @@ spec:
             containerPort: 3000
 ```
 
-- `replicas` refers to the number of pods that the deployment makes... each pod is identical. that run the template. the master create the pod. the deployment gets teh pod using the label:value component:web. That' what the selector and the metadata are for. A pod might have multiple labels and the selector can very selectively get only certain pods with certain labels using the `matchLabels` property.
+- `replicas` refers to the number of pods that the deployment makes... each pod is identical. the master create the pod using the template section. the deployment gets the pod it is supposed to control using the `matchLabels` section. That' what the selector and the metadata are for in the template section. A pod might have multiple labels and the selector can very selectively get only certain pods with certain labels using the `matchLabels` property.
+
+```yaml
+selector:
+    matchLabels:
+      component: server
+```
+
 - the template section is the config for every single pod created by the deployment. the template looks exactly like a pod deployment config.
 
 - `kubectl delete -f <config_file>`. will delete that object. kubectl will look at the file and use the kind and name, and deletes the object with the same name and kind. This is an imperative command.
@@ -810,3 +817,43 @@ export DOCKER_CERT_PATH="/Users/jwan/.minikube/certs"
 192.168.99.100
 ✔ 16:30 ~/complex/client [master|✚ 1…1] $
 ```
+
+why would you do this? you can get logs like docker logs <containerid> for a container inside the k8s cluster. or run `docker exec -it <container-id> sh
+
+
+
+# Section 14
+## Notes
+
+![arch](images/section_14/arch.png)
+
+- a node port exposes a set of pods to theo utside world whereas a ClusterIP exposes set of pods to other objects in the cluster, but nobody in the outside can access the object that the service is pointed to. ClusterIP cannot allow access to the object from the outside world. We need an Ingress Service to access the pod. So a clusterIP service points to an object and allows access to it from everything else in the deployment.
+
+- so again, the clusterIP is when we don't want the object accessible to the outside world. But if it's accessible to the IngressService, it's accessible to the outside world through the Ingress Service.
+
+- worker doesn't have a clusterIP because nothing needs to connect to it. IT's going to connect to something else. It connects to redis. No request goes into the worke so we don't need a service.
+
+```yaml
+ports:
+    - port: 6379
+      targetPort: 6379
+```
+
+- any outside object thati s trying to get to the associated object to teh clusterIP`port` is going to go through `port` and forwarded to `targetPort`. After it goes through the ClusterIP service, it will connect  to the container via the `targetPort`. 
+
+- the postgres pod has to have a connection to a postgres PVC, a persistent volume claim. Same kind of volume as a docker compose volume which allows us to share files between out local host machine and docker container. Updates on the machine updated files in the container. What is a volume? A volume We need one for postgres because if the container's (postgres) crashes, then the filesystem is lost including the filesystem in the postgres container. If postgres crashes, we need a volume to persist on the local machine. the k8 deployment will recreate a new postgres contaienr with no persisted files or carryover data. How do volumes help? the files for postgres will write to the host machine on the volume so that when the container crashes, a new pod will be recreated that will use the files on the local machine volume. The volume will be on the host machine and this will keep the files persisted even in the event of a crash.
+- However, one quick thing is that there can only be one replica of postgres with one volume. YOu cannot have two replicas for 1 volume. This will not work well and they need to cooperate with each other for this to work. More config is necesssary to have 2 containers for 1 volume.
+- a kubernetes volume is an object in the kubernetes world. We can write a config for it. That object allows a container to store data in the pod level, not the local machine like a container volume. There are also two concepts called a persistent volume  or a persistent volume claim, not a volume. It's different from a docker volume which is on the local machine. K8s volumes are on the pod. So there are volumes, PVC, and persistent volumes. We will use a k8s volume.
+
+
+![volume](images/section_14/k8s_volume.png)
+
+- the voluem is data storage inside/associated the pod. Can be accessed by any container in the pod. BUT if the pod dies, the volume dies and goes away as well. Volumes survive container restarats but not pod restarts. Then the deployment would kick and recreate the pod with a fresh volume. So we can't use kubernetes volumes for postgres. We need something else. 
+- persistent volume vs volume:
+
+![volume_vs_pvc](images/section_14/volume_vs_pvc.png)
+
+
+## New commands
+
+`
