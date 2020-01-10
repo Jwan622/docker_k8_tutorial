@@ -853,6 +853,30 @@ ports:
 
 ![volume_vs_pvc](images/section_14/volume_vs_pvc.png)
 
+- persistent volume is outside the pod. if the container needs to be recreated, the new one can connect to the PV outside of the pod. If the pod needs to be deleted or crashes, then the new one can connect to the PV. perfect for databases! a regular volume is tied to the lifecycle of the pod but the PV is not which is great!
+- so what is a persistent volume claim (PVC)? In the event there isn't a PV, you get a claim. It's like an IOU. Not an actual volume, it is an advertisement.  It is created when you ask for it and then a dynmically provisioned volume is going to be made or a statically provisioned volue that was made beforehand is given. The PVC cannot store anything, it simply is the options that yo have for storage in the cluster. There are config files for PVCs too. They are options for our pod when they are provisioned. K8s can go get a hard drive that can be used right away because they were made ahead of time and are called statically provisioned. Dynamically provisioned are made on the fly.
+- PVC is attached to a podf config but not actual storage. When the pod config is given teo the master, it sees teh PVC and tries to find a statically or dynmically provisioned persistent volume to meet that requirement of that claim. It is given with the pod. It is given a slice of hard drive ultimately.
+
+
+```text
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: database-persistent-volume-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+```
+
+What are the access modes:
+
+![access_modes](images/section_14/access_modes.png)
+
+
+
 
 ## New commands
 
